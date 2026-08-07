@@ -1,11 +1,13 @@
-class GaloiField:
-    def __init_(self, m, pol):
+class GaloisField:
+    def __init_(self, m: int, pol: int):
         self.m: int = m
         self.pol: int = pol
 
-    def sum(self, a: int, b: int) -> int:
+
+    def suma(self, a: int, b: int) -> int:
         """La suma es sobre los coeficiente en mod 2. Analogo a una XOR"""
         return a ^ b
+
 
     def producto(self, a: int, b: int) -> int:
         """
@@ -33,19 +35,21 @@ class GaloiField:
 
         return r
 
+
     def inverso(self, a: int) -> int:
         """El inverso de a es a^-1, y a^-1 = a^(2^m - 2)"""
         if a == 0:
             raise ZeroDivisionError("El elemento 0 no tiene inverso multiplicativo")
         return self.potencia(a, (1 << self.m) - 2)   # a^(2^m - 2)
 
+
     def division(self, a: int, b: int) -> int:
         if b == 0:
             raise ZeroDivisionError("No se puede dividir por el elemento 0")
         return self.producto(a, self.inverso(b))
 
+
     def potencia(self, A: int, n: int) -> int:
-        """"""
         if n < 0:
             raise ValueError("El exponente debe ser no negativo")
         r = 1
@@ -56,3 +60,51 @@ class GaloiField:
             base = self.producto(base, base)
             n >>= 1
         return r
+
+    def __eq__(self, otro):
+        return self.m == otro.m and self.P == otro.P
+
+
+class GFPoly:
+    def __init__(self, gf: GaloisField, coefs: list):
+        self._validate_coef(coefs, gf)
+        self.gf: GaloisField = gf
+        self.coefs: list = self._prune_zeros(coefs)
+
+    #------------------- Validators ---------------------
+    def _validate_coef(self, coefs: list, gf: GaloisField):
+        for c in coefs:
+            if c < 0 or c > (1 << gf.m) - 1:
+                raise ValueError("El coeficiente no es un elemento del campo")
+    
+    def _prune_zeros(self, coefs: list) -> list:
+        prune_coefs = list(coefs)
+        while len(prune_coefs) > 1 and prune_coefs[0] == 0:
+            prune_coefs.pop(0)
+        return prune_coefs
+
+    #------------------- Operators ---------------------
+    def __add__(self, otro: "GFPoly") -> "GFPoly":
+        if (self.gf != otro.gf):
+            raise ValueError("Los coeficientes de ambos polinomios deben pertenecer al mismo campo de Galois")
+        max_len = max(len(self.coefs), len(otro.coefs))
+        r_coefs_rev = []
+        for i in range(1, max_len + 1):
+            c1 = self.coefs[-i] if i <= len(self.coefs) else 0
+            c2 = otro.coefs[-i] if i <= len(otro.coefs) else 0
+            r_coefs_rev.append(self.gf.suma(c1, c2))
+        r_coefs = r_coefs_rev[::-1]
+        return GFPoly(self.gf, r_coefs)
+
+
+    def __mul__(self, otro: "GFPoly") -> "GFPoly":
+        if (self.gf != otro.gf):
+            raise ValueError("Los coeficientes de ambos polinomios deben pertenecer al mismo campo de Galois")
+        n = len(self.coefs) - 1
+        k = len(otro.coefs) - 1
+        r = [0] * (n + k + 1) # la cantidad de coeficientes del resultado es (n + k + 1)
+        for i in range(len(self.coefs)):
+            for j in range(len(otro.coefs)):
+                r[i+j] = self.gf.suma(r[i+j], self.gf.producto(self.coefs[i], otro.coefs[j]))
+        return  GFPoly(self.gf, r) 
+
