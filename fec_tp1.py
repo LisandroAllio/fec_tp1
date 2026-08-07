@@ -106,5 +106,34 @@ class GFPoly:
         for i in range(len(self.coefs)):
             for j in range(len(otro.coefs)):
                 r[i+j] = self.gf.suma(r[i+j], self.gf.producto(self.coefs[i], otro.coefs[j]))
-        return  GFPoly(self.gf, r) 
+        return  GFPoly(self.gf, r)
 
+
+    def __floordiv__(self, otro: "GFPoly") -> list["GFPoly"]:
+        if (self.gf != otro.gf):
+            raise ValueError("Los coeficientes de ambos polinomios deben pertenecer al mismo campo de Galois")
+        if len(otro.coefs) == 1 and otro.coefs[0] == 0:
+            raise ZeroDivisionError("No se puede dividir por un polinomio nulo")
+
+        n = len(self.coefs) - 1
+        k = len(otro.coefs) - 1
+
+        cociente_x: list = [0] * (n - k + 1)
+        g = len(cociente_x) - 1
+        resto_x: list = list(self.coefs)
+
+        while (len(resto_x) - 1) >= k:
+            r = (len(resto_x) - 1)
+            c_r = resto_x[0]
+            c_g = otro.coefs[0]
+
+            t = self.gf.division(c_r, c_g)
+            m = (r - k)
+
+            termino = [self.gf.producto(coef, t) for coef in otro.coefs]
+            termino.extend([0]*m)
+
+            resto_x = self._prune_zeros([self.gf.suma(resto_x[i], termino[i]) for i in range(len(resto_x))])
+            cociente_x[g-m] = t
+
+        return [GFPoly(self.gf, resto_x), GFPoly(self.gf, cociente_x)]
