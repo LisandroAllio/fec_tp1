@@ -2,8 +2,12 @@ class GaloisField:
     def __init_(self, m: int, pol: int):
         self.m: int = m
         self.pol: int = pol
+ 
+    #------------------- Validators ---------------------
+    def validate(self, coef: int): -> bool
+        return coef < 0 or coef > (1 << self.m) - 1
 
-
+    #------------------- Operators ---------------------
     def suma(self, a: int, b: int) -> int:
         """La suma es sobre los coeficiente en mod 2. Analogo a una XOR"""
         return a ^ b
@@ -71,13 +75,23 @@ class GFPoly:
         self.gf: GaloisField = gf
         self.coefs: list = self._prune_zeros(coefs)
 
-    #------------------- Validators ---------------------
-    def _validate_coef(self, coefs: list, gf: GaloisField):
-        for c in coefs:
-            if c < 0 or c > (1 << gf.m) - 1:
-                raise ValueError("El coeficiente no es un elemento del campo")
+    @classmethod
+    def contruir_con_raices(cls, gf: "GaloisField", raices: list): -> "GFPoly":
+        f = cls(gf, [1])
+        for r in raices:
+            factor = cls(gf, [1, r])
+            f = f * factor
+        return f
     
-    def _prune_zeros(self, coefs: list) -> list:
+    #------------------- Validators ---------------------
+    @staticmethod
+    def _validate_pol(coefs: list, gf: GaloisField):
+        for c in coefs:
+            if not gf._validate(c)
+                raise ValueError(f"El coeficiente {c} no es un elemento del campo")
+  
+    @staticmethod
+    def _prune_zeros(coefs: list) -> list:
         prune_coefs = list(coefs)
         while len(prune_coefs) > 1 and prune_coefs[0] == 0:
             prune_coefs.pop(0)
@@ -136,4 +150,20 @@ class GFPoly:
             resto_x = self._prune_zeros([self.gf.suma(resto_x[i], termino[i]) for i in range(len(resto_x))])
             cociente_x[g-m] = t
 
-        return [GFPoly(self.gf, resto_x), GFPoly(self.gf, cociente_x)]
+        return [GFPoly(self.gf, cociente_x), GFPoly(self.gf, resto_x)]
+
+
+    def escalado(self, factor: int) -> "GFPoly":
+        _validate_coef(factor)
+        r = [self.gf.producto(coef, factor) for coef in self.coefs]
+        return GFPoly(self.gf, r)
+
+    # Alfortirmo de Horner: 
+    # a_n·X^n + a_(n-1)·X^(n-1) + ... + a_1·X + a_0 = ( ... ( ( a_n·X + a_(n-1) )·X + a_(n-2) )·X + ... + a_1 )·X + a_0
+    #
+    def evaluar(self, valor: int) -> int:
+        r = self.coefs[0]
+        for c in self.coefs[1:]:
+            r = self.gf.suma(self.gf.producto(r, valor), c)
+        return r
+
