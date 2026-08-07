@@ -1,5 +1,5 @@
 class GaloisField:
-    def __init_(self, m: int, pol: int):
+    def __init__(self, m: int, pol: int):
         self.m: int = m
         self.pol: int = pol
 
@@ -28,7 +28,7 @@ class GaloisField:
 
         while b > 0:
             if b & 1:
-                r += a
+                r ^= a
             if a & (1 << self.m - 1):
                 a = (a << 1) ^ polFull
             else:
@@ -83,7 +83,7 @@ class GFPoly:
     @staticmethod
     def _validate_pol(coefs: list, gf: GaloisField):
         for c in coefs:
-            if not gf.validate(c):
+            if gf.validate(c):
                 raise ValueError(f"El coeficiente {c} no es un elemento del campo")
 
     @staticmethod
